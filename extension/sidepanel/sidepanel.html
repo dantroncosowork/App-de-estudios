@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>Estudio Deep Link</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-dot" aria-hidden="true"></span>
+        <h1 class="brand-title">Estudio Deep Link</h1>
+      </div>
+      <nav class="tab-nav" aria-label="Vistas principales">
+        <button type="button" id="tab-capture" class="tab-btn is-active" aria-pressed="true">
+          Capturar
+        </button>
+        <button type="button" id="tab-library" class="tab-btn" aria-pressed="false">
+          Biblioteca <span id="library-count" class="count-pill">0</span>
+        </button>
+      </nav>
+    </header>
+
+    <div id="status-banner" class="status-banner" role="status" aria-live="polite" hidden></div>
+
+    <main class="app-main">
+      <!-- CAPTURE VIEW -->
+      <section id="view-capture" class="view-section" aria-labelledby="capture-heading">
+        <h2 id="capture-heading" class="visually-hidden">Capturar enlace, cita o pantalla</h2>
+
+        <div class="quick-actions" aria-label="Herramientas de captura">
+          <button type="button" id="btn-detect-tab" class="btn btn-secondary">
+            Detectar pestaña
+          </button>
+          <button type="button" id="btn-crop-tab" class="btn btn-secondary">
+            Recortar área
+          </button>
+          <button type="button" id="btn-full-capture" class="btn btn-ghost">
+            Pestaña entera
+          </button>
+        </div>
+
+        <form id="capture-form" class="capture-form" aria-labelledby="capture-heading">
+          <input type="hidden" id="editing-item-id" name="editingItemId" value="">
+
+          <div class="source-bar">
+            <span id="detected-source-badge" class="source-badge source-web">Web</span>
+            <span id="detected-timestamp-pill" class="meta-pill" hidden></span>
+            <span id="editing-badge" class="meta-pill is-editing" hidden>Editando captura</span>
+          </div>
+
+          <div class="field">
+            <label for="input-title">Título <span aria-hidden="true">*</span></label>
+            <input
+              type="text"
+              id="input-title"
+              name="title"
+              required
+              maxlength="240"
+              enterkeyhint="next"
+              placeholder="Ej. Explicación de diccionarios en Python"
+            >
+          </div>
+
+          <div class="field-row">
+            <div class="field field-grow">
+              <label for="input-url">Enlace (opcional si es solo captura)</label>
+              <input
+                type="url"
+                id="input-url"
+                name="url"
+                autocorrect="off"
+                autocapitalize="none"
+                spellcheck="false"
+                enterkeyhint="next"
+                placeholder="https://..."
+              >
+            </div>
+            <div class="field field-time">
+              <label for="input-timestamp">Minuto</label>
+              <input
+                type="text"
+                id="input-timestamp"
+                name="timestamp"
+                inputmode="numeric"
+                autocorrect="off"
+                autocapitalize="none"
+                spellcheck="false"
+                placeholder="04:15"
+                aria-describedby="timestamp-help"
+              >
+              <span id="timestamp-help" class="hint">mm:ss</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="label-row">
+              <label for="select-project">Proyecto <span aria-hidden="true">*</span></label>
+              <button type="button" id="btn-manage-projects" class="link-btn">
+                + Gestionar proyectos
+              </button>
+            </div>
+            <select id="select-project" name="projectId" required></select>
+          </div>
+
+          <div class="field">
+            <label for="input-category">Categorías / etiquetas</label>
+            <div class="tag-input-wrap">
+              <input
+                type="text"
+                id="input-category"
+                name="categoryDraft"
+                autocorrect="off"
+                autocapitalize="none"
+                spellcheck="false"
+                enterkeyhint="done"
+                aria-describedby="category-help"
+                placeholder="Escribe una categoría y pulsa Enter o coma"
+              >
+              <button type="button" id="btn-add-category" class="btn btn-secondary btn-sm">
+                Añadir
+              </button>
+            </div>
+            <span id="category-help" class="hint">
+              Puedes añadir varias (ej. fundamentos, funciones, idea).
+            </span>
+            <div id="selected-categories" class="chip-list" aria-label="Categorías seleccionadas"></div>
+            <div id="suggested-categories" class="chip-list is-suggestions" aria-label="Sugerencias de categorías"></div>
+          </div>
+
+          <div class="field">
+            <div class="label-row">
+              <label for="input-quote">Cita / fragmento subrayado</label>
+              <button type="button" id="btn-clear-quote" class="link-btn" hidden>Limpiar</button>
+            </div>
+            <textarea
+              id="input-quote"
+              name="quote"
+              rows="2"
+              placeholder="Si subrayas texto en Gemini, Coursera o cualquier web, aparece aquí automáticamente."
+            ></textarea>
+          </div>
+
+          <div class="field">
+            <label for="input-note">Tu nota o idea</label>
+            <textarea
+              id="input-note"
+              name="note"
+              rows="3"
+              placeholder="¿Qué entendiste, por qué importa o qué quieres practicar después?"
+            ></textarea>
+          </div>
+
+          <div class="field">
+            <div class="label-row">
+              <span class="field-label-text">Captura visual (opcional)</span>
+              <button type="button" id="btn-remove-image" class="link-btn is-danger" hidden>
+                Quitar imagen
+              </button>
+            </div>
+            <div id="image-dropzone" class="image-dropzone" tabindex="0" aria-describedby="paste-help">
+              <p id="paste-help" class="dropzone-hint">
+                Pega una captura con <kbd>Ctrl</kbd>+<kbd>V</kbd> (por ejemplo tras <kbd>Win</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>) o usa <strong>Recortar área</strong>.
+              </p>
+              <div id="image-preview-wrap" class="image-preview-wrap" hidden>
+                <button type="button" id="btn-preview-image" class="image-thumb-btn" aria-label="Ampliar captura adjunta">
+                  <img id="image-preview-el" alt="Vista previa de captura adjunta">
+                </button>
+                <span id="image-meta-text" class="hint"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" id="btn-cancel-edit" class="btn btn-secondary" hidden>
+              Cancelar edición
+            </button>
+            <button type="submit" id="btn-save-capture" class="btn btn-primary">
+              Guardar captura
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- LIBRARY VIEW -->
+      <section id="view-library" class="view-section" aria-labelledby="library-heading" hidden>
+        <h2 id="library-heading" class="visually-hidden">Biblioteca de capturas</h2>
+
+        <search class="library-search">
+          <form id="library-filter-form" class="filter-form">
+            <div class="field">
+              <label for="filter-query" class="visually-hidden">Buscar capturas</label>
+              <input
+                type="search"
+                id="filter-query"
+                name="query"
+                autocorrect="off"
+                autocapitalize="none"
+                spellcheck="false"
+                placeholder="Buscar título, nota, cita o categoría..."
+              >
+            </div>
+            <div class="filter-row">
+              <div class="field field-grow">
+                <label for="filter-project" class="visually-hidden">Filtrar por proyecto</label>
+                <select id="filter-project" name="project"></select>
+              </div>
+              <div class="field">
+                <label for="filter-source" class="visually-hidden">Filtrar por fuente</label>
+                <select id="filter-source" name="source">
+                  <option value="all">Todas las fuentes</option>
+                  <option value="youtube">YouTube</option>
+                  <option value="coursera">Coursera</option>
+                  <option value="gemini">Gemini</option>
+                  <option value="notebooklm">NotebookLM</option>
+                  <option value="claude">Claude</option>
+                  <option value="chatgpt">ChatGPT</option>
+                  <option value="web">Web</option>
+                  <option value="screenshot">Captura PC</option>
+                </select>
+              </div>
+            </div>
+          </form>
+          <div id="library-category-filters" class="chip-list is-filter-chips" aria-label="Filtrar por categoría"></div>
+        </search>
+
+        <div id="library-list" class="library-list"></div>
+
+        <footer class="library-footer">
+          <div class="footer-meta">
+            <span id="storage-summary" class="hint">0 capturas guardadas</span>
+          </div>
+          <div class="footer-actions">
+            <button type="button" id="btn-export-full" class="btn btn-secondary btn-sm">
+              Exportar JSON
+            </button>
+            <button type="button" id="btn-export-lite" class="btn btn-ghost btn-sm">
+              JSON sin fotos
+            </button>
+            <button type="button" id="btn-import-json" class="btn btn-ghost btn-sm">
+              Importar
+            </button>
+            <input type="file" id="input-import-file" accept="application/json,.json" class="visually-hidden">
+          </div>
+        </footer>
+      </section>
+    </main>
+  </div>
+
+  <!-- DIALOG: MANAGE PROJECTS -->
+  <dialog id="dialog-projects" class="modal-dialog" closedby="any" aria-labelledby="dialog-projects-title">
+    <div class="modal-header">
+      <h1 id="dialog-projects-title" class="modal-title">Proyectos de estudio</h1>
+      <button type="button" id="btn-close-projects" class="btn btn-ghost btn-sm" aria-label="Cerrar proyectos">
+        Cerrar
+      </button>
+    </div>
+
+    <form id="form-new-project" class="project-create-form">
+      <div class="field">
+        <label for="input-project-name">Nuevo proyecto</label>
+        <input
+          type="text"
+          id="input-project-name"
+          name="projectName"
+          required
+          maxlength="60"
+          placeholder="Ej. Certificación IBM AI"
+          autofocus
+        >
+      </div>
+      <div class="field">
+        <span class="field-label-text">Color</span>
+        <div id="project-color-picker" class="color-picker" role="radiogroup" aria-label="Color del proyecto"></div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm">Crear proyecto</button>
+    </form>
+
+    <ul id="projects-manage-list" class="projects-manage-list"></ul>
+  </dialog>
+
+  <!-- DIALOG: IMAGE LIGHTBOX -->
+  <dialog id="dialog-image" class="modal-dialog is-lightbox" closedby="any" aria-labelledby="dialog-image-title">
+    <div class="modal-header">
+      <h1 id="dialog-image-title" class="modal-title">Captura adjunta</h1>
+      <button type="button" id="btn-close-image" class="btn btn-ghost btn-sm">Cerrar</button>
+    </div>
+    <img id="lightbox-img" class="lightbox-img" alt="Captura ampliada">
+  </dialog>
+
+  <!-- DIALOG: CONFIRM DELETE -->
+  <dialog id="dialog-confirm-delete" class="modal-dialog" aria-labelledby="dialog-delete-title">
+    <h1 id="dialog-delete-title" class="modal-title">¿Eliminar esta captura?</h1>
+    <p id="dialog-delete-desc" class="modal-desc">Esta acción no se puede deshacer.</p>
+    <form method="dialog" class="modal-actions">
+      <button value="cancel" class="btn btn-secondary" autofocus>Cancelar</button>
+      <button value="confirm" class="btn btn-danger">Eliminar</button>
+    </form>
+  </dialog>
+
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>
