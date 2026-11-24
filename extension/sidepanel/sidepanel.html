@@ -10,9 +10,17 @@
 <body>
   <div class="app-shell">
     <header class="app-header">
-      <div class="brand">
-        <span class="brand-dot" aria-hidden="true"></span>
-        <h1 class="brand-title">Estudio Deep Link</h1>
+      <div class="brand" title="Estudio Deep Link">
+        <svg class="brand-icon" viewBox="0 0 128 128" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M64 26 V100" />
+          <path d="M64 28 C58 17 42 17 36 27 C24 27 16 37 19 49 C12 56 13 70 22 76 C19 88 29 99 42 98 C47 105 58 106 64 99" />
+          <path d="M64 28 C70 17 86 17 92 27 C104 27 112 37 109 49 C116 56 115 70 106 76 C109 88 99 99 86 98 C81 105 70 106 64 99" />
+          <path d="M36 39 C44 39 48 45 47 52" />
+          <path d="M27 59 C36 57 44 62 45 70" />
+          <path d="M92 39 C84 39 80 45 81 52" />
+          <path d="M101 59 C92 57 84 62 83 70" />
+        </svg>
+        <h1 class="visually-hidden">Estudio Deep Link</h1>
       </div>
       <nav class="tab-nav" aria-label="Vistas principales">
         <button type="button" id="tab-capture" class="tab-btn is-active" aria-pressed="true">
@@ -29,85 +37,57 @@
     <main class="app-main">
       <!-- CAPTURE VIEW -->
       <section id="view-capture" class="view-section" aria-labelledby="capture-heading">
-        <h2 id="capture-heading" class="visually-hidden">Capturar enlace, cita o pantalla</h2>
-
-        <div class="quick-actions" aria-label="Herramientas de captura">
-          <button type="button" id="btn-detect-tab" class="btn btn-secondary">
-            Detectar pestaña
-          </button>
-          <button type="button" id="btn-crop-tab" class="btn btn-secondary">
-            Recortar área
-          </button>
-          <button type="button" id="btn-full-capture" class="btn btn-ghost">
-            Pestaña entera
-          </button>
-        </div>
+        <h2 id="capture-heading" class="visually-hidden">Captura rápida</h2>
 
         <form id="capture-form" class="capture-form" aria-labelledby="capture-heading">
           <input type="hidden" id="editing-item-id" name="editingItemId" value="">
 
-          <div class="source-bar">
-            <span id="detected-source-badge" class="source-badge source-web">Web</span>
-            <span id="detected-timestamp-pill" class="meta-pill" hidden></span>
-            <span id="editing-badge" class="meta-pill is-editing" hidden>Editando captura</span>
-          </div>
+          <!-- TOP QUICK SAVE BAR -->
+          <div class="top-save-card">
+            <div class="top-save-row">
+              <div class="source-bar">
+                <span id="detected-source-badge" class="source-badge source-web">Web</span>
+                <button type="button" id="btn-grab-time" class="meta-pill is-clickable" title="Actualizar minuto actual del video">
+                  <span id="detected-timestamp-label">⏱ --:--</span>
+                </button>
+                <span id="detected-anchor-pill" class="meta-pill" hidden>Área</span>
+                <span id="editing-badge" class="meta-pill is-editing" hidden>Editando</span>
+              </div>
 
-          <div class="field">
-            <label for="input-title">Título <span aria-hidden="true">*</span></label>
-            <input
-              type="text"
-              id="input-title"
-              name="title"
-              required
-              maxlength="240"
-              enterkeyhint="next"
-              placeholder="Ej. Explicación de diccionarios en Python"
-            >
-          </div>
-
-          <div class="field-row">
-            <div class="field field-grow">
-              <label for="input-url">Enlace (opcional si es solo captura)</label>
-              <input
-                type="url"
-                id="input-url"
-                name="url"
-                autocorrect="off"
-                autocapitalize="none"
-                spellcheck="false"
-                enterkeyhint="next"
-                placeholder="https://..."
-              >
+              <div class="top-save-actions">
+                <button type="button" id="btn-detect-tab" class="btn btn-secondary btn-xs" title="Volver a detectar pestaña actual">
+                  ↻
+                </button>
+                <button type="button" id="btn-cancel-edit" class="btn btn-ghost btn-xs" hidden>
+                  Cancelar
+                </button>
+                <button type="submit" id="btn-save-capture" class="btn btn-primary btn-xs">
+                  Guardar
+                </button>
+              </div>
             </div>
-            <div class="field field-time">
-              <label for="input-timestamp">Minuto</label>
-              <input
-                type="text"
-                id="input-timestamp"
-                name="timestamp"
-                inputmode="numeric"
-                autocorrect="off"
-                autocapitalize="none"
-                spellcheck="false"
-                placeholder="04:15"
-                aria-describedby="timestamp-help"
-              >
-              <span id="timestamp-help" class="hint">mm:ss</span>
-            </div>
+
+            <p id="detected-preview-line" class="detected-preview" title="Página detectada automáticamente">
+              Sin página detectada
+            </p>
           </div>
 
+          <!-- 1-CLICK PROJECT PICKER -->
           <div class="field">
             <div class="label-row">
-              <label for="select-project">Proyecto <span aria-hidden="true">*</span></label>
-              <button type="button" id="btn-manage-projects" class="link-btn">
-                + Gestionar proyectos
-              </button>
+              <span class="field-label-text">Proyecto</span>
+              <button type="button" id="btn-manage-projects" class="link-btn">+ Proyectos</button>
             </div>
-            <select id="select-project" name="projectId" required></select>
+            <div id="project-pills" class="pill-grid" role="radiogroup" aria-label="Seleccionar proyecto"></div>
           </div>
 
+          <!-- 1-CLICK CATEGORIES -->
           <div class="field">
-            <label for="input-category">Categorías / etiquetas</label>
+            <div class="label-row">
+              <label for="input-category">Categorías</label>
+              <span class="hint">Clic para activar o escribe</span>
+            </div>
+            <div id="category-pills" class="chip-list" aria-label="Categorías"></div>
             <div class="tag-input-wrap">
               <input
                 type="text"
@@ -117,53 +97,111 @@
                 autocapitalize="none"
                 spellcheck="false"
                 enterkeyhint="done"
-                aria-describedby="category-help"
-                placeholder="Escribe una categoría y pulsa Enter o coma"
+                placeholder="+ Nueva categoría (Enter o coma)"
               >
-              <button type="button" id="btn-add-category" class="btn btn-secondary btn-sm">
+              <button type="button" id="btn-add-category" class="btn btn-secondary btn-xs">
                 Añadir
               </button>
             </div>
-            <span id="category-help" class="hint">
-              Puedes añadir varias (ej. fundamentos, funciones, idea).
-            </span>
-            <div id="selected-categories" class="chip-list" aria-label="Categorías seleccionadas"></div>
-            <div id="suggested-categories" class="chip-list is-suggestions" aria-label="Sugerencias de categorías"></div>
           </div>
 
+          <!-- QUICK NOTE -->
           <div class="field">
             <div class="label-row">
-              <label for="input-quote">Cita / fragmento subrayado</label>
-              <button type="button" id="btn-clear-quote" class="link-btn" hidden>Limpiar</button>
+              <label for="input-note">Nota rápida</label>
+              <span class="hint">Ctrl+Enter guarda</span>
             </div>
-            <textarea
-              id="input-quote"
-              name="quote"
-              rows="2"
-              placeholder="Si subrayas texto en Gemini, Coursera o cualquier web, aparece aquí automáticamente."
-            ></textarea>
-          </div>
-
-          <div class="field">
-            <label for="input-note">Tu nota o idea</label>
             <textarea
               id="input-note"
               name="note"
-              rows="3"
-              placeholder="¿Qué entendiste, por qué importa o qué quieres practicar después?"
+              rows="2"
+              placeholder="Idea clave, duda o qué practicar..."
             ></textarea>
           </div>
 
-          <div class="field">
-            <div class="label-row">
-              <span class="field-label-text">Captura visual (opcional)</span>
-              <button type="button" id="btn-remove-image" class="link-btn is-danger" hidden>
-                Quitar imagen
-              </button>
+          <!-- COLLAPSIBLE OPTIONAL DETAILS (TITLE, URL, TIMESTAMP, QUOTE) -->
+          <details id="details-optional" class="optional-details">
+            <summary class="optional-summary">
+              <span>Detalles opcionales (título, enlace, cita)</span>
+              <span id="quote-indicator" class="meta-pill" hidden>Con cita</span>
+            </summary>
+
+            <div class="optional-body">
+              <div class="field">
+                <label for="input-title">Título / descripción (opcional)</label>
+                <input
+                  type="text"
+                  id="input-title"
+                  name="title"
+                  maxlength="240"
+                  enterkeyhint="next"
+                  placeholder="Si lo dejas vacío usa el título de la página"
+                >
+              </div>
+
+              <div class="field-row">
+                <div class="field field-grow">
+                  <label for="input-url">Enlace</label>
+                  <input
+                    type="url"
+                    id="input-url"
+                    name="url"
+                    autocorrect="off"
+                    autocapitalize="none"
+                    spellcheck="false"
+                    placeholder="https://..."
+                  >
+                </div>
+                <div class="field field-time">
+                  <label for="input-timestamp">Minuto</label>
+                  <input
+                    type="text"
+                    id="input-timestamp"
+                    name="timestamp"
+                    inputmode="numeric"
+                    autocorrect="off"
+                    autocapitalize="none"
+                    spellcheck="false"
+                    placeholder="04:15"
+                  >
+                </div>
+              </div>
+
+              <div class="field">
+                <div class="label-row">
+                  <label for="input-quote">Cita / fragmento subrayado</label>
+                  <button type="button" id="btn-clear-quote" class="link-btn" hidden>Limpiar</button>
+                </div>
+                <textarea
+                  id="input-quote"
+                  name="quote"
+                  rows="2"
+                  placeholder="Texto subrayado de Gemini, Coursera o cualquier web."
+                ></textarea>
+              </div>
             </div>
+          </details>
+
+          <!-- BOTTOM VISUAL CAPTURE SECTION -->
+          <div class="capture-visual-box">
+            <div class="label-row">
+              <span class="field-label-text">Captura visual</span>
+              <div class="visual-actions">
+                <button type="button" id="btn-crop-tab" class="btn btn-secondary btn-xs">
+                  Recortar área
+                </button>
+                <button type="button" id="btn-full-capture" class="btn btn-ghost btn-xs">
+                  Pestaña
+                </button>
+                <button type="button" id="btn-remove-image" class="link-btn is-danger" hidden>
+                  Quitar
+                </button>
+              </div>
+            </div>
+
             <div id="image-dropzone" class="image-dropzone" tabindex="0" aria-describedby="paste-help">
               <p id="paste-help" class="dropzone-hint">
-                Pega una captura con <kbd>Ctrl</kbd>+<kbd>V</kbd> (por ejemplo tras <kbd>Win</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>) o usa <strong>Recortar área</strong>.
+                O pega una captura con <kbd>Ctrl</kbd>+<kbd>V</kbd> (<kbd>Win</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>).
               </p>
               <div id="image-preview-wrap" class="image-preview-wrap" hidden>
                 <button type="button" id="btn-preview-image" class="image-thumb-btn" aria-label="Ampliar captura adjunta">
@@ -172,15 +210,6 @@
                 <span id="image-meta-text" class="hint"></span>
               </div>
             </div>
-          </div>
-
-          <div class="form-actions">
-            <button type="button" id="btn-cancel-edit" class="btn btn-secondary" hidden>
-              Cancelar edición
-            </button>
-            <button type="submit" id="btn-save-capture" class="btn btn-primary">
-              Guardar captura
-            </button>
           </div>
         </form>
       </section>
@@ -211,7 +240,7 @@
               <div class="field">
                 <label for="filter-source" class="visually-hidden">Filtrar por fuente</label>
                 <select id="filter-source" name="source">
-                  <option value="all">Todas las fuentes</option>
+                  <option value="all">Todas</option>
                   <option value="youtube">YouTube</option>
                   <option value="coursera">Coursera</option>
                   <option value="gemini">Gemini</option>
@@ -224,23 +253,36 @@
               </div>
             </div>
           </form>
-          <div id="library-category-filters" class="chip-list is-filter-chips" aria-label="Filtrar por categoría"></div>
+          <div id="library-category-filters" class="chip-list" aria-label="Filtrar por categoría"></div>
+
+          <div class="library-tabgroups-bar">
+            <label class="focus-toggle" title="Colapsa los demás Tab Groups de Chrome al lanzar un grupo">
+              <input type="checkbox" id="toggle-focus-mode" name="focusMode" checked>
+              <span>Modo Foco</span>
+            </label>
+            <div class="tabgroups-bar-actions">
+              <button type="button" id="btn-launch-filtered" class="btn btn-primary btn-xs" hidden>
+                ▶ Abrir filtro
+              </button>
+              <button type="button" id="btn-import-tab-group" class="btn btn-secondary btn-xs" title="Guardar pestañas de un Tab Group abierto en Chrome">
+                + Grupo Chrome
+              </button>
+            </div>
+          </div>
         </search>
 
         <div id="library-list" class="library-list"></div>
 
         <footer class="library-footer">
-          <div class="footer-meta">
-            <span id="storage-summary" class="hint">0 capturas guardadas</span>
-          </div>
+          <span id="storage-summary" class="hint">0 capturas</span>
           <div class="footer-actions">
-            <button type="button" id="btn-export-full" class="btn btn-secondary btn-sm">
+            <button type="button" id="btn-export-full" class="btn btn-secondary btn-xs">
               Exportar JSON
             </button>
-            <button type="button" id="btn-export-lite" class="btn btn-ghost btn-sm">
+            <button type="button" id="btn-export-lite" class="btn btn-ghost btn-xs">
               JSON sin fotos
             </button>
-            <button type="button" id="btn-import-json" class="btn btn-ghost btn-sm">
+            <button type="button" id="btn-import-json" class="btn btn-ghost btn-xs">
               Importar
             </button>
             <input type="file" id="input-import-file" accept="application/json,.json" class="visually-hidden">
@@ -254,7 +296,7 @@
   <dialog id="dialog-projects" class="modal-dialog" closedby="any" aria-labelledby="dialog-projects-title">
     <div class="modal-header">
       <h1 id="dialog-projects-title" class="modal-title">Proyectos de estudio</h1>
-      <button type="button" id="btn-close-projects" class="btn btn-ghost btn-sm" aria-label="Cerrar proyectos">
+      <button type="button" id="btn-close-projects" class="btn btn-ghost btn-xs" aria-label="Cerrar proyectos">
         Cerrar
       </button>
     </div>
@@ -276,7 +318,7 @@
         <span class="field-label-text">Color</span>
         <div id="project-color-picker" class="color-picker" role="radiogroup" aria-label="Color del proyecto"></div>
       </div>
-      <button type="submit" class="btn btn-primary btn-sm">Crear proyecto</button>
+      <button type="submit" class="btn btn-primary btn-xs">Crear proyecto</button>
     </form>
 
     <ul id="projects-manage-list" class="projects-manage-list"></ul>
@@ -286,7 +328,7 @@
   <dialog id="dialog-image" class="modal-dialog is-lightbox" closedby="any" aria-labelledby="dialog-image-title">
     <div class="modal-header">
       <h1 id="dialog-image-title" class="modal-title">Captura adjunta</h1>
-      <button type="button" id="btn-close-image" class="btn btn-ghost btn-sm">Cerrar</button>
+      <button type="button" id="btn-close-image" class="btn btn-ghost btn-xs">Cerrar</button>
     </div>
     <img id="lightbox-img" class="lightbox-img" alt="Captura ampliada">
   </dialog>
@@ -296,8 +338,82 @@
     <h1 id="dialog-delete-title" class="modal-title">¿Eliminar esta captura?</h1>
     <p id="dialog-delete-desc" class="modal-desc">Esta acción no se puede deshacer.</p>
     <form method="dialog" class="modal-actions">
-      <button value="cancel" class="btn btn-secondary" autofocus>Cancelar</button>
-      <button value="confirm" class="btn btn-danger">Eliminar</button>
+      <button value="cancel" class="btn btn-secondary btn-xs" autofocus>Cancelar</button>
+      <button value="confirm" class="btn btn-danger btn-xs">Eliminar</button>
+    </form>
+  </dialog>
+
+  <!-- DIALOG: CONFIRM LARGE GROUP LAUNCH (>8 LINKS) -->
+  <dialog id="dialog-confirm-launch" class="modal-dialog" aria-labelledby="dialog-launch-title">
+    <h1 id="dialog-launch-title" class="modal-title">¿Abrir grupo grande en Chrome?</h1>
+    <p id="dialog-launch-desc" class="modal-desc"></p>
+    <form method="dialog" class="modal-actions">
+      <button value="cancel" class="btn btn-secondary btn-xs" autofocus>Cancelar</button>
+      <button value="confirm" class="btn btn-primary btn-xs">Abrir grupo</button>
+    </form>
+  </dialog>
+
+  <!-- DIALOG: MOVE ITEM TO PROJECT -->
+  <dialog id="dialog-move-item" class="modal-dialog" closedby="any" aria-labelledby="dialog-move-title">
+    <div class="modal-header">
+      <h1 id="dialog-move-title" class="modal-title">Mover a proyecto</h1>
+      <button type="button" id="btn-close-move" class="btn btn-ghost btn-xs">Cerrar</button>
+    </div>
+    <p id="dialog-move-desc" class="modal-desc"></p>
+    <div id="move-project-choices" class="pill-grid"></div>
+  </dialog>
+
+  <!-- DIALOG: IMPORT CHROME TAB GROUP -->
+  <dialog id="dialog-import-group" class="modal-dialog" closedby="any" aria-labelledby="dialog-import-group-title">
+    <div class="modal-header">
+      <h1 id="dialog-import-group-title" class="modal-title">Importar Tab Group de Chrome</h1>
+      <button type="button" id="btn-close-import-group" class="btn btn-ghost btn-xs">Cerrar</button>
+    </div>
+
+    <div id="import-groups-empty" class="empty-state" hidden>
+      <p>No hay Tab Groups abiertos en esta ventana.</p>
+      <p class="hint">Agrupa 1 o más pestañas en Chrome y vuelve a intentarlo.</p>
+    </div>
+
+    <form id="form-import-group" class="import-group-form">
+      <div class="field">
+        <span class="field-label-text">Elige el grupo de Chrome</span>
+        <div id="import-groups-list" class="import-groups-list" role="radiogroup" aria-label="Tab Groups disponibles"></div>
+      </div>
+
+      <fieldset class="dest-fieldset">
+        <legend>¿Dónde guardarlo?</legend>
+        <div class="radio-option">
+          <input type="radio" id="import-dest-existing" name="importDest" value="existing" checked>
+          <label for="import-dest-existing">En un proyecto existente</label>
+        </div>
+        <div id="import-existing-wrap" class="field">
+          <label for="import-target-project" class="visually-hidden">Proyecto destino</label>
+          <select id="import-target-project" name="targetProject"></select>
+        </div>
+        <div class="radio-option">
+          <input type="radio" id="import-dest-new" name="importDest" value="new">
+          <label for="import-dest-new">Crear proyecto nuevo (nombre y color del grupo)</label>
+        </div>
+      </fieldset>
+
+      <div class="field">
+        <label for="import-group-category">Categoría opcional para todas</label>
+        <input
+          type="text"
+          id="import-group-category"
+          name="groupCategory"
+          autocorrect="off"
+          autocapitalize="none"
+          spellcheck="false"
+          placeholder="Ej. investigacion, tema-1"
+        >
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" id="btn-cancel-import-group" class="btn btn-secondary btn-xs">Cancelar</button>
+        <button type="submit" id="btn-submit-import-group" class="btn btn-primary btn-xs">Importar pestañas</button>
+      </div>
     </form>
   </dialog>
 

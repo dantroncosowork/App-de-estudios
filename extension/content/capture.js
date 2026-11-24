@@ -12,7 +12,11 @@
     return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
   }
 
-  function showPageToast(message, durationMs = 3200) {
+  function normalizeText(str) {
+    return (str || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  }
+
+  function showPageToast(message, durationMs = 3400) {
     const existing = document.getElementById('study-deeplink-toast');
     if (existing) existing.remove();
 
@@ -51,7 +55,38 @@
     }, durationMs);
   }
 
+  function highlightElementTemporarily(el, toastMessage) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const prevOutline = el.style.outline;
+    const prevOffset = el.style.outlineOffset;
+    const prevBg = el.style.backgroundColor;
+    const prevRadius = el.style.borderRadius;
+    const prevTransition = el.style.transition;
+
+    el.style.transition = 'outline-color 220ms ease, background-color 220ms ease';
+    el.style.outline = '3px solid #2563eb';
+    el.style.outlineOffset = '4px';
+    el.style.borderRadius = '6px';
+    el.style.backgroundColor = 'rgba(37, 99, 235, 0.14)';
+
+    if (toastMessage) showPageToast(toastMessage);
+
+    setTimeout(() => {
+      el.style.outline = prevOutline;
+      el.style.outlineOffset = prevOffset;
+      el.style.backgroundColor = prevBg;
+      el.style.borderRadius = prevRadius;
+      el.style.transition = prevTransition;
+    }, 4200);
+  }
+
   function findBestVideo() {
+    const shorts = document.querySelector('ytd-reel-video-renderer[is-active] video');
+    if (shorts && shorts.readyState >= 1) return shorts;
+
+    const ytMain = document.querySelector('#movie_player video.html5-main-video, video.html5-main-video');
+    if (ytMain && (ytMain.currentTime > 0 || ytMain.duration > 1)) return ytMain;
+
     const videos = Array.from(document.querySelectorAll('video'));
     if (videos.length === 0) return null;
 
@@ -76,27 +111,52 @@
     return best;
   }
 
-  function cleanTitle(rawTitle) {
-    if (!rawTitle) return '';
-    return rawTitle.replace(/^\(\d+\)\s+/, '').trim();
-  }
+  function captureAreaAnchor(rect) {
+    const cx = Math.min(window.innerWidth - 2, Math.max(2, rect.x + rect.width / 2));
+    const cy = Math.min(window.innerHeight - 2, Math.max(2, rect.y + rect.height / 2));
+    const target = document.elementFromPoint(cx, cy);
 
-  function extractPageContext() {
-    const video = findBestVideo();
-    let timestampSec = null;
+    let elementId = '';
+    let textSnippet = '';
+    let headingText = '';
 
-    if (video && Number.isFinite(video.currentTime) && (video.currentTime > 0 || video.duration > 1)) {
-      timestampSec = Math.floor(video.currentTime);
+    if (target) {
+      const withId = target.closest('[id]');
+      if (withId?.id && !withId.id.startsWith('study-deeplink')) {
+        elementId = withId.id;
+      }
+
+      const block =
+        target.closest('p, li, pre, code, blockquote, figure, table, section, article, h1, h2, h3, h4, td, div') ||
+        target;
+      const rawText = (block.innerText || block.textContent || '').replace(/\s+/g, ' ').trim();
+      textSnippet = rawText.slice(0, 140);
+
+      // Find nearest heading above or inside parent section
+      const section = target.closest('section, article, main') || document.body;
+      const headings = Array.from(section.querySelectorAll('h1, h2, h3, h4'));
+      let closestH = null;
+      let bestDist = Infinity;
+      for (const h of headings) {
+        const hr = h.getBoundingClientRect();
+        const dist = cy - hr.top;
+        if (dist >= -40 && dist < bestDist) {
+          bestDist = dist;
+          closestH = h;
+        }
+      }
+      if (closestH) {
+        headingText = (closestH.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 100);
+      }
     }
 
-    const rawSelection = window.getSelection ? window.getSelection().toString() : '';
-    const quote = rawSelection.replace(/\s+/g, ' ').trim().slice(0, 1800);
-
+    const scrollHeight = Math.max(1, document.documentElement.scrollHeight);
     return {
-      url: window.location.href,
-      title: cleanTitle(document.title),
-      timestampSec,
-      quote
+      scrollY: Math.round(window.scrollY),
+      scrollRatio: Number((window.scrollY / scrollHeight).toFixed(4)),
+      elementId,
+      headingText,
+      textSnippet
     };
   }
 
@@ -220,13 +280,17 @@
           return;
         }
 
+        // Capture DOM/scroll anchor for this visual area now that overlay is gone
+        const pageAnchor = captureAreaAnchor(currentRect);
+
         // Wait two frames so the overlay is completely cleared before Chrome captures the tab
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             resolve({
               ok: true,
               rect: currentRect,
-              dpr: window.devicePixelRatio || 1
+              dpr: window.devicePixelRatio || 1,
+              pageAnchor
             });
           });
         });
@@ -263,60 +327,110 @@
     attempt();
   }
 
-  function normalizeText(str) {
-    return (str || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  // Finds the deepest visible block containing a phrase — works across Markdown formatting (bold/code) in Gemini, Claude, ChatGPT, and webs
+  function findBestBlockByText(rawPhrase) {
+    const clean = normalizeText(rawPhrase);
+    if (clean.length < 4) return null;
+
+    const candidates = [clean.slice(0, 60), clean.slice(0, 32)];
+    if (clean.length > 70) {
+      candidates.push(clean.slice(24, 64));
+    }
+
+    const selector =
+      'p, li, pre, code, blockquote, h1, h2, h3, h4, td, dd, message-content, model-response, article, section';
+    const blocks = Array.from(document.querySelectorAll(selector));
+
+    for (const needle of candidates) {
+      if (needle.length < 4) continue;
+      let bestEl = null;
+      let bestLen = Infinity;
+
+      for (const el of blocks) {
+        if (el.id === 'study-deeplink-toast') continue;
+        const rect = el.getBoundingClientRect();
+        if (rect.width === 0 && rect.height === 0) continue;
+
+        const text = normalizeText(el.innerText || el.textContent);
+        if (text.length >= needle.length && text.includes(needle)) {
+          // Prefer the tightest / smallest block containing the quote
+          if (text.length < bestLen) {
+            bestLen = text.length;
+            bestEl = el;
+          }
+        }
+      }
+
+      if (bestEl) return bestEl;
+    }
+
+    return null;
   }
 
   function locateQuoteWhenReady(quote) {
     const clean = normalizeText(quote);
     if (clean.length < 4) return;
-    const snippet = clean.slice(0, 64);
-    const deadline = Date.now() + 10000;
-
-    function searchDom() {
-      const walker = document.createTreeWalker(document.body || document.documentElement, NodeFilter.SHOW_TEXT);
-      let node = walker.nextNode();
-      while (node) {
-        const val = normalizeText(node.nodeValue);
-        if (val.length >= 4 && val.includes(snippet.slice(0, Math.min(snippet.length, 32)))) {
-          const parent = node.parentElement;
-          if (parent && parent.offsetParent !== null) {
-            return parent;
-          }
-        }
-        node = walker.nextNode();
-      }
-      return null;
-    }
+    const deadline = Date.now() + 12000;
 
     function attempt() {
-      const el = searchDom();
+      const el = findBestBlockByText(quote);
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        const prevOutline = el.style.outline;
-        const prevOffset = el.style.outlineOffset;
-        const prevBg = el.style.backgroundColor;
-        el.style.outline = '2px solid #2563eb';
-        el.style.outlineOffset = '4px';
-        el.style.backgroundColor = 'rgba(37, 99, 235, 0.14)';
-        showPageToast('Estudio Deep Link · Cita localizada');
-
-        setTimeout(() => {
-          el.style.outline = prevOutline;
-          el.style.outlineOffset = prevOffset;
-          el.style.backgroundColor = prevBg;
-        }, 3800);
+        highlightElementTemporarily(el, 'Estudio Deep Link · Cita localizada');
         return;
       }
 
       if (Date.now() < deadline) {
         setTimeout(attempt, 650);
       } else {
-        showPageToast('Chat abierto · Consulta la cita completa en tu panel de Estudio');
+        showPageToast('Cita no visible aún · Usa "Copiar cita" + Ctrl+F si el chat es muy largo');
       }
     }
 
-    setTimeout(attempt, 800);
+    setTimeout(attempt, 900);
+  }
+
+  function restoreAreaAnchorWhenReady(anchor) {
+    if (!anchor) return;
+    const deadline = Date.now() + 10000;
+
+    function attempt(isFinal) {
+      if (anchor.textSnippet && anchor.textSnippet.length >= 12) {
+        const byText = findBestBlockByText(anchor.textSnippet);
+        if (byText) {
+          highlightElementTemporarily(byText, 'Estudio Deep Link · Área recortada localizada');
+          return;
+        }
+      }
+
+      if (anchor.elementId) {
+        const byId = document.getElementById(anchor.elementId);
+        if (byId) {
+          highlightElementTemporarily(byId, 'Estudio Deep Link · Sección localizada');
+          return;
+        }
+      }
+
+      if (anchor.headingText && anchor.headingText.length >= 4) {
+        const byHeading = findBestBlockByText(anchor.headingText);
+        if (byHeading) {
+          highlightElementTemporarily(byHeading, 'Estudio Deep Link · Sección localizada');
+          return;
+        }
+      }
+
+      if (!isFinal && Date.now() < deadline) {
+        setTimeout(() => attempt(Date.now() + 700 >= deadline), 600);
+        return;
+      }
+
+      // Scroll fallback when DOM has no stable text anchor (e.g., canvas / chart / image)
+      if (typeof anchor.scrollY === 'number' && anchor.scrollY > 0) {
+        window.scrollTo({ top: anchor.scrollY, behavior: 'smooth' });
+        showPageToast('Estudio Deep Link · Posición aproximada restaurada');
+      }
+    }
+
+    setTimeout(() => attempt(false), 700);
   }
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -324,11 +438,6 @@
 
     if (message.type === 'STUDY_PING') {
       sendResponse({ ok: true });
-      return;
-    }
-
-    if (message.type === 'STUDY_EXTRACT_CONTEXT') {
-      sendResponse(extractPageContext());
       return;
     }
 
@@ -345,6 +454,8 @@
         seekVideoWhenReady(message.timestampSec);
       } else if (message.quote) {
         locateQuoteWhenReady(message.quote);
+      } else if (message.pageAnchor) {
+        restoreAreaAnchorWhenReady(message.pageAnchor);
       }
       sendResponse({ ok: true });
     }

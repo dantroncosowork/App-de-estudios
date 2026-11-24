@@ -28,6 +28,7 @@
     "storage",
     "unlimitedStorage",
     "tabs",
+    "tabGroups",
     "scripting",
     "contextMenus"
   ],
@@ -47,11 +48,17 @@
     }
   ],
   "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+S"
+      },
+      "description": "Abrir panel lateral de Estudio Deep Link"
+    },
     "open-capture": {
       "suggested_key": {
-        "default": "Alt+S"
+        "default": "Alt+Shift+C"
       },
-      "description": "Abrir panel de estudio y capturar la pestaña actual"
+      "description": "Capturar pestaña actual (minuto y cita) en Estudio"
     }
   }
 }

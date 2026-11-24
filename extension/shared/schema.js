@@ -5,6 +5,7 @@ export const STORAGE_KEYS = {
   PROJECTS: 'study_projects',
   ITEMS: 'study_items',
   LAST_PROJECT_ID: 'study_last_project_id',
+  FOCUS_MODE: 'study_focus_mode',
   PENDING_CAPTURE: 'study_pending_capture',
   PENDING_JUMPS: 'study_pending_jumps'
 };
@@ -19,6 +20,55 @@ export const PROJECT_COLORS = [
   '#db2777',
   '#4f46e5'
 ];
+
+const HEX_TO_TAB_GROUP_COLOR = {
+  '#2563eb': 'blue',
+  '#4f46e5': 'blue',
+  '#7c3aed': 'purple',
+  '#059669': 'green',
+  '#d97706': 'orange',
+  '#dc2626': 'red',
+  '#0891b2': 'cyan',
+  '#db2777': 'pink'
+};
+
+const TAB_GROUP_COLOR_TO_HEX = {
+  blue: '#2563eb',
+  purple: '#7c3aed',
+  green: '#059669',
+  orange: '#d97706',
+  yellow: '#d97706',
+  red: '#dc2626',
+  cyan: '#0891b2',
+  pink: '#db2777',
+  grey: '#4f46e5'
+};
+
+export function hexToTabGroupColor(hex) {
+  if (!hex) return 'blue';
+  return HEX_TO_TAB_GROUP_COLOR[String(hex).toLowerCase()] || 'blue';
+}
+
+export function tabGroupColorToHex(color) {
+  if (!color) return PROJECT_COLORS[0];
+  return TAB_GROUP_COLOR_TO_HEX[String(color).toLowerCase()] || PROJECT_COLORS[0];
+}
+
+export function normalizeUrlForMatch(rawUrl) {
+  if (!rawUrl) return '';
+  try {
+    const u = new URL(rawUrl);
+    // Strip hash (#...) and YouTube timestamp param so the same video/page isn't duplicated
+    u.hash = '';
+    if (u.hostname.includes('youtube.com') || u.hostname === 'youtu.be') {
+      u.searchParams.delete('t');
+      u.searchParams.delete('time_continue');
+    }
+    return u.toString().replace(/\/$/, '');
+  } catch {
+    return String(rawUrl).split('#')[0].replace(/\/$/, '');
+  }
+}
 
 export const SOURCE_META = {
   youtube: { label: 'YouTube', badgeClass: 'source-youtube' },
@@ -74,9 +124,19 @@ export function formatTimestamp(seconds) {
 
 export function parseTimestampInput(text) {
   if (!text || !text.trim()) return null;
-  const cleaned = text.trim();
+  const cleaned = text.trim().toLowerCase();
   if (/^\d+$/.test(cleaned)) {
     return Math.max(0, parseInt(cleaned, 10));
+  }
+  if (/^\d+s$/.test(cleaned)) {
+    return Math.max(0, parseInt(cleaned.slice(0, -1), 10));
+  }
+  const hmsMatch = cleaned.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/);
+  if (hmsMatch && (hmsMatch[1] || hmsMatch[2] || hmsMatch[3])) {
+    const h = Number(hmsMatch[1] || 0);
+    const m = Number(hmsMatch[2] || 0);
+    const s = Number(hmsMatch[3] || 0);
+    return h * 3600 + m * 60 + s;
   }
   const parts = cleaned.split(':').map((p) => Number(p.trim()));
   if (parts.some((n) => Number.isNaN(n) || n < 0)) return null;
@@ -87,6 +147,29 @@ export function parseTimestampInput(text) {
     return parts[0] * 3600 + parts[1] * 60 + parts[2];
   }
   return null;
+}
+
+export function extractTimestampFromUrl(rawUrl) {
+  if (!rawUrl) return null;
+  try {
+    const parsed = new URL(rawUrl);
+    const candidate =
+      parsed.searchParams.get('t') ||
+      parsed.searchParams.get('start') ||
+      parsed.searchParams.get('time_continue');
+    if (candidate) {
+      return parseTimestampInput(candidate);
+    }
+    if (parsed.hash) {
+      const hashMatch = parsed.hash.match(/[&#?]t=([^&]+)/i);
+      if (hashMatch) {
+        return parseTimestampInput(hashMatch[1]);
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export function buildTextFragmentUrl(rawUrl, quote) {
